@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Example</title>
+    <style>
+        /* 필요한 CSS 스타일을 여기에 추가하세요 */
+        #webcam-container {
+            border: 1px solid #000000;
+            padding: 10px;
+            margin: 0 auto; /* 가운데 정렬을 위해 margin을 auto로 설정 */
+            width: 34%; /* 가로 크기 2배로 조정 */
+            height: 100%; /* 세로 크기 유지 */
+            display: none; /* 초기에 숨김 */
+        }
+        #label-container {
+            font-size: 50px;
+            text-align: center; /* 레이블 텍스트를 가운데 정렬 */
+        }
+        #start-button {
+            display: block;
+            margin: 0 auto;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            padding: 20px 60px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-button-container">
+        <button id="start-button" type="button" onclick="init()">Start</button>
+    </div>
+    <div id="webcam-container"></div>
+    <div id="label-container">
+        <div id="most-percent-class">Most Percent Class: </div>
+        <div id="match-rate">Match Rate: </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/yOBhCQj7_/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(400, 400, flip); /* 가로 세로 크기 2배로 조정 */
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+
+            // 버튼 클릭 시 숨김
+            document.getElementById("start-button-container").style.display = "none";
+            document.getElementById("webcam-container").style.display = "block";
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            const highestProbabilityIndex = prediction.reduce((maxIndex, current, index) => {
+                return current.probability > prediction[maxIndex].probability ? index : maxIndex;
+            }, 0);
+            const highestProbabilityClass = prediction[highestProbabilityIndex].className;
+            document.getElementById("most-percent-class").textContent = `The Type Of Trash: ${highestProbabilityClass}`;
+            document.getElementById("match-rate").textContent = `Match Rate: ${prediction[highestProbabilityIndex].probability.toFixed(2)}`;
+        }
+    </script>
+</body>
+</html>
